@@ -92,7 +92,7 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	
 	if(conversionType == 3){	/*If you want to convert the file to a P3 file...*/
 		if(ppmType == '3'){	/*The file is P3, so convert P3 to P3*/
-			if(p3toP3(input, output, numBytes))
+			if(p3toP3(input, output, numBytes, width))
 				return 1;
 			return 0;
 		}
@@ -123,22 +123,37 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	return 1;
 }
 
-int p3toP3(char *input, char *output, int numBytes){
-	FILE *inputPointer = fopen(input, "r");	/*Open the input file*/
-	FILE *outputPointer = fopen(output, "w");	/*Open the output file*/
+int p3toP3(char *input, char *output, int numBytes, int width){
+	FILE *inputPointer = fopen(input, "rb");	/*Open the input file*/
+	FILE *outputPointer = fopen(output, "wb");	/*Open the output file*/
 	
-	char bufferCharacter;
-	while(1){
+	char bufferCharacter;	/*This is a single character buffer for reading and writing the header*/
+	int whitespaceCount = 0;	/*This will help us figure out when the header ends*/
+	int totalWhitespaces = 0;	/*This is the amount of white spaces in the body of the file to be converted*/
+	while(whitespaceCount < 4){		/*Until the end of the header is reached, copy header info to the output file*/
 		bufferCharacter = fgetc(inputPointer);
-		if(bufferCharacter == EOF){
-			break;
+		if(isspace(bufferCharacter)){
+			whitespaceCount++;
 		}
 		fprintf(outputPointer, "%c", bufferCharacter);
 	}
-	fclose(inputPointer);
-	fclose(outputPointer);
-	printf("P3 to P3 Conversion Complete!\n\n");
-	return 0;
+	whitespaceCount = 0;	/*Reset whitespace count, we will use it later*/
+	
+	/*Fancy arithmetic to calculate total whitespaces in the body of the input file*/
+	totalWhitespaces = 2*(numBytes/3) + (numBytes/width/3)*(width - 1)*2 + (numBytes/width/3);
+	
+	while(whitespaceCount < totalWhitespaces){	/*Write the entire input file body to output, until all whitespace has been scanned*/
+		bufferCharacter = fgetc(inputPointer);
+		if(isspace(bufferCharacter)){
+			whitespaceCount++;
+		}
+		fprintf(outputPointer, "%c", bufferCharacter);
+	}
+	
+	fclose(inputPointer);	/*Close input file*/
+	fclose(outputPointer);	/*Close output file*/
+	printf("P3 to P3 Conversion Complete!\n\n");	/*Show the user that the task was completed!*/
+	return 0;	/*Return a successful number*/
 }
 
 int p6toP3(char *input, char *output, int numBytes, int width){
