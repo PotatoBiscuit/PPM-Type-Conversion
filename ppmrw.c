@@ -34,6 +34,8 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	int numDigitsHeight = 0;		/*This will be the digit count of the file Height field*/
 	char *widthPointer;				/*This will point to the Width string we pull from the file*/
 	char *heightPointer;			/*This will point to the Width string we pull from the file*/
+	int width;						/*This is the numeric Width value*/
+	int height;						/*This is the numeric Height value*/
 	char ppmType;					/*Type of PPM file that we need to convert*/
 	FILE *inputPointer = fopen(input, "rb");	/*Open the input file*/
 	
@@ -41,10 +43,7 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	fseek(inputPointer, 1, SEEK_SET);		/*Move file pointer one byte to the right, we want the number after the P*/
 	ppmType = fgetc(inputPointer);			/*Grab the format number of file, which should be 3 or 6*/
 
-	if(!isspace(fgetc(inputPointer))){		/*If there is no whitespace separating the "magic number" and dimensions info throw an error*/
-		fprintf(stderr, "Input file has an invalid header");
-		return 1;
-	}
+	fseek(inputPointer, 1, SEEK_CUR);		/*Advance file pointer one byte*/
 
 	while(!isspace(fgetc(inputPointer))){	/*Iterate through the Width field*/
 		filePointerCounter++;
@@ -82,7 +81,9 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	
 	fclose(inputPointer);			/*Close input file*/
 	
-	numBytes = 3 * atoi(widthPointer) * atoi(heightPointer);	/*Computer number of bytes in our image using our recorded Height and Width fields*/
+	width = atoi(widthPointer);
+	height = atoi(heightPointer);
+	numBytes = 3 * width * height;	/*Computer number of bytes in our image using our recorded Height and Width fields*/
 	
 	if(ppmType != '3' && ppmType != '6'){		/*If the file is not P3 or P6 format, throw an error*/
 		fprintf(stderr, "Error: Input file must be P3 or P6 PPM format");
@@ -97,7 +98,7 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 		}
 		
 		if(ppmType == '6'){	/*The file is P6, so convert P6 to P3*/
-			if(p6toP3(input, output, numBytes))
+			if(p6toP3(input, output, numBytes, width))
 				return 1;
 			return 0;
 		}
@@ -140,9 +141,59 @@ int p3toP3(char *input, char *output, int numBytes){
 	return 0;
 }
 
-int p6toP3(char *input, char *output, int numBytes){
-	printf("P6 to P3 Conversion Complete!\n\n");
-	return 0;
+int p6toP3(char *input, char *output, int numBytes, int width){
+	FILE *inputPointer = fopen(input, "rb");	/*Open the input file*/
+	FILE *outputPointer = fopen(output, "wb");	/*Open the output file*/
+	
+	unsigned char *buffer = malloc(sizeof(char)*numBytes);	/*Create buffer for later reading and writing use*/
+	int sizeOfRead;		/*This will keep track of the total number of bytes read, in case something goes wrong*/
+	char bufferCharacter;	/*This is a single character buffer for reading and writing the header*/
+	long bufferNumber;	/*This will hold the color values to be inserted into the new P3 file*/
+	int whitespaceCount = 0;	/*This will help us figure out when the header ends*/
+	int genericCounter = 0;		/*This is a generic counter that will help print our values correctly*/
+	int genericCounter1 = 0;	/*Same here*/
+	
+	fprintf(outputPointer, "P3\n");	/*Put the 'magic numbers' into our newly created P3 file*/
+	fseek(inputPointer, 3, SEEK_SET);	/*Move the input file pointer past the input 'magic numbers', we don't need those*/
+	
+	while(whitespaceCount < 3){		/*Until the end of the header is reached, copy header info to the output file*/
+		bufferCharacter = fgetc(inputPointer);
+		if(isspace(bufferCharacter)){
+			whitespaceCount++;
+		}
+		fprintf(outputPointer, "%c", bufferCharacter);
+	}
+	
+	sizeOfRead = fread(buffer, 1, numBytes, inputPointer);	/*Read non-header info from the input file into our buffer*/
+	
+	while(sizeOfRead){	/*While there are still bytes in the buffer to write, continue*/
+		if(genericCounter == 2 && genericCounter1 == width - 1){	/*If final column of picture is reached, write color value, then new-line*/
+			bufferNumber = *(buffer++);
+			fprintf(outputPointer, "%d\n", bufferNumber);
+			genericCounter = 0;
+			genericCounter1 = 0;
+			sizeOfRead--;
+			continue;
+		}
+		if(genericCounter == 2){	/*If final value of an RGB triplet is reached, write color value, then two spaces*/
+			bufferNumber = *(buffer++);
+			fprintf(outputPointer, "%d  ", bufferNumber);
+			genericCounter = 0;
+			genericCounter1++;
+			sizeOfRead--;
+			continue;
+		}
+		bufferNumber = *(buffer++);		/*Write color value, then add a space*/
+		fprintf(outputPointer, "%d ", bufferNumber);
+		genericCounter++;
+		sizeOfRead--;
+	}
+	
+	fclose(inputPointer);	/*Close input file*/
+	fclose(outputPointer);	/*Close output file*/
+	
+	printf("P6 to P3 Conversion Complete!\n\n");	/*Tell the user about the success!*/
+	return 0;	/*Return successful int*/
 }
 
 int p3toP6(char *input, char *output, int numBytes){
@@ -160,10 +211,6 @@ int p6toP6(char *input, char *output, int numBytes){
 	int whitespaceCount = 0;	/*This will help us figure out when the header ends*/
 	while(whitespaceCount < 4){		/*Until the end of the header is reached, copy header info to the output file*/
 		bufferCharacter = fgetc(inputPointer);
-		if(bufferCharacter == EOF){	/*If the end of the file is reached before the while loop ends, the header is incomplete*/
-			fprintf(stderr, "P6 input file improperly formatted");
-			return 1;
-		}
 		if(isspace(bufferCharacter)){
 			whitespaceCount++;
 		}
