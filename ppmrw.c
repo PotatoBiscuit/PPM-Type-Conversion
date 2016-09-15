@@ -84,6 +84,8 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	width = atoi(widthPointer);
 	height = atoi(heightPointer);
 	numBytes = 3 * width * height;	/*Computer number of bytes in our image using our recorded Height and Width fields*/
+	free(widthPointer);
+	free(heightPointer);
 	
 	if(ppmType != '3' && ppmType != '6'){		/*If the file is not P3 or P6 format, throw an error*/
 		fprintf(stderr, "Error: Input file must be P3 or P6 PPM format");
@@ -167,6 +169,7 @@ int p6toP3(char *input, char *output, int numBytes, int width){
 	int whitespaceCount = 0;	/*This will help us figure out when the header ends*/
 	int genericCounter = 0;		/*This is a generic counter that will help print our values correctly*/
 	int genericCounter1 = 0;	/*Same here*/
+	int bufferCounter = 0;
 	
 	fprintf(outputPointer, "P3\n");	/*Put the 'magic numbers' into our newly created P3 file*/
 	fseek(inputPointer, 3, SEEK_SET);	/*Move the input file pointer past the input 'magic numbers', we don't need those*/
@@ -191,6 +194,7 @@ int p6toP3(char *input, char *output, int numBytes, int width){
 			continue;
 		}
 		if(genericCounter == 2){	/*If final value of an RGB triplet is reached, write color value, then two spaces*/
+
 			bufferNumber = *(buffer++);
 			fprintf(outputPointer, "%d  ", bufferNumber);
 			genericCounter = 0;
@@ -198,6 +202,7 @@ int p6toP3(char *input, char *output, int numBytes, int width){
 			sizeOfRead--;
 			continue;
 		}
+
 		bufferNumber = *(buffer++);		/*Write color value, then add a space*/
 		fprintf(outputPointer, "%d ", bufferNumber);
 		genericCounter++;
@@ -212,6 +217,59 @@ int p6toP3(char *input, char *output, int numBytes, int width){
 }
 
 int p3toP6(char *input, char *output, int numBytes){
+	FILE *inputPointer = fopen(input, "rb");	/*Open the input file*/
+	FILE *outputPointer = fopen(output, "wb");	/*Open the output file*/
+	
+	char *buffer = malloc(sizeof(char)*numBytes);	/*Create buffer for later reading and writing use*/
+	char bufferCharacter;	/*This is a single character buffer for reading and writing the header*/
+	char *valuePointer;
+	int filePointerCounter = 0;
+	int numDigitsValue = 0;
+	int whitespaceCount = 0;
+	int numBytes1 = numBytes;
+	
+	fprintf(outputPointer, "P6\n");	/*Put the 'magic numbers' into our newly created P6 file*/
+	fseek(inputPointer, 3, SEEK_SET);	/*Move the input file pointer past the input 'magic numbers', we don't need those*/
+	
+	while(whitespaceCount < 3){		/*Until the end of the header is reached, copy header info to the output file*/
+		bufferCharacter = fgetc(inputPointer);
+		if(isspace(bufferCharacter)){
+			whitespaceCount++;
+		}
+		fprintf(outputPointer, "%c", bufferCharacter);
+	}
+	
+	while(numBytes){
+		while(!isspace(fgetc(inputPointer))){	/*Iterate through the color value*/
+			filePointerCounter++;
+		}
+
+		valuePointer = malloc(sizeof(char)*filePointerCounter + 1);		/*Create space for the color value on this computer*/
+		numDigitsValue = filePointerCounter;						/*Store the digit amount of the color value*/
+
+		
+		fseek(inputPointer, -1 - filePointerCounter, SEEK_CUR);		/*Move pointer back to the start of the color value*/
+		while(filePointerCounter){									/*Record each digit of the color value*/
+			*valuePointer = fgetc(inputPointer);
+			filePointerCounter--;
+			valuePointer++;
+		}
+		*valuePointer = '\0';
+		
+		valuePointer -= numDigitsValue;
+		bufferCharacter = atoi(valuePointer);
+		*buffer = bufferCharacter;
+		buffer++;
+		while(isspace(fgetc(inputPointer))){}
+		fseek(inputPointer, -1, SEEK_CUR);
+		free(valuePointer);
+		numBytes--;
+	}
+	buffer -= (numBytes1);
+	fwrite(buffer, 1, numBytes1, outputPointer);
+	
+	
+	
 	printf("P3 to P6 Conversion Complete!\n\n");
 	return 0;
 }
@@ -235,7 +293,7 @@ int p6toP6(char *input, char *output, int numBytes){
 	sizeOfRead = fread(buffer, 1, numBytes, inputPointer);	/*Read non-header info from the input file into our buffer*/
 	fwrite(buffer, 1, sizeOfRead, outputPointer);	/*Write the data from our buffer into the output file*/
 	
-	
+	free(buffer);
 	fclose(inputPointer);	/*Close input file*/
 	fclose(outputPointer);	/*Close output file*/
 	printf("P6 to P6 Conversion Complete!\n\n");	/*Notify user of their success!*/
