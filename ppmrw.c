@@ -3,6 +3,8 @@
 #include <ctype.h>
 #include <string.h>
 
+char* removeComments(char* inputPointer);
+
 int main(int argc, char *argv[]){
 	
 	FILE * testOpen;	/*This pointer will test to see if the input file exists*/
@@ -48,7 +50,7 @@ int main(int argc, char *argv[]){
 		return 0;
 	}
 	if(*argv[1] == '6'){	/*If the user types a '6' in the command line, we must convert to P6 PPM format*/
-		printf("converting to P6 format...\n\n");
+		printf("Converting to P6 format...\n\n");
 		if(ppmConversionHandler(strcat(argv[2], ".ppm"), strcat(argv[3], ".ppm"), 6))
 			return 1;
 		return 0;
@@ -75,7 +77,6 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	FILE *inputPointer = fopen(input, "rb");	/*Open the input file*/
 	
 
-	
 	if(fgetc(inputPointer) != 'P'){	/*Move file pointer one byte to the right, we want the number after the P*/
 		fprintf(stderr, "Error: Header is not in the correct format");	/*Throw error if the first input file character is not 'P'*/
 		return 1;
@@ -90,6 +91,8 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 		fprintf(stderr, "Error: Header is not in the correct format");
 		return 1;
 	}
+	while(isspace(fgetc(inputPointer))){}	/*Advance through concurrent whitespace*/
+	fseek(inputPointer, -1, SEEK_CUR);
 
 	
 	while(!isspace(fgetc(inputPointer))){	/*Iterate through the Width field*/
@@ -115,7 +118,10 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 		widthPointer++;
 	}
 	*widthPointer = '\0';
-	fseek(inputPointer, 1, SEEK_CUR);							/*Move file pointer to the start of the Height field*/
+	
+	while(isspace(fgetc(inputPointer))){}	/*Advance through concurrent whitespace*/
+	fseek(inputPointer, -1, SEEK_CUR);
+	
 	widthPointer -= numDigitsWidth;								/*Move pointer pointing to Width info, back to its origin*/
 
 	
@@ -141,11 +147,14 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 		heightPointer++;
 	}
 	*heightPointer = '\0';
+	
+	while(isspace(fgetc(inputPointer))){}	/*Advance through concurrent whitespace*/
+	fseek(inputPointer, -1, SEEK_CUR);
+	
 	heightPointer -= numDigitsHeight;
 	
 	
-	fseek(inputPointer, 1, SEEK_CUR);			/*We will also do the same for the Max Color field*/
-	while(!isspace(fgetc(inputPointer))){
+	while(!isspace(fgetc(inputPointer))){	/*We will also do the same for the Max Color field*/
 		if(filePointerCounter >= 3){	/*Max color field can be no more than 3 digits*/
 			fprintf(stderr, "Error: Max color field is limited to 3 digits, or Header info is incomplete");
 			return 1;
@@ -219,6 +228,10 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	return 1;
 }
 
+char* removeComments(char* inputPointer){
+	return NULL;
+}
+
 int p3toP3(char *input, char *output, int numBytes, int width){
 	FILE *inputPointer = fopen(input, "rb");	/*Open the input file*/
 	FILE *outputPointer = fopen(output, "wb");	/*Open the output file*/
@@ -229,6 +242,8 @@ int p3toP3(char *input, char *output, int numBytes, int width){
 	while(whitespaceCount < 4){		/*Until the end of the header is reached, copy header info to the output file*/
 		bufferCharacter = fgetc(inputPointer);
 		if(isspace(bufferCharacter)){
+			while(isspace(fgetc(inputPointer))){}
+			fseek(inputPointer, -1, SEEK_CUR);
 			whitespaceCount++;
 		}
 		fprintf(outputPointer, "%c", bufferCharacter);
@@ -248,7 +263,7 @@ int p3toP3(char *input, char *output, int numBytes, int width){
 			whitespaceCount++;
 			while(isspace(fgetc(inputPointer))){}
 			fseek(inputPointer, -1, SEEK_CUR);
-			fprintf(outputPointer, "\n", bufferCharacter);	/*Write a single \n for every group of whitespace*/
+			fprintf(outputPointer, "\n");	/*Write a single \n for every group of whitespace*/
 			continue;
 		}
 		if(!isdigit(bufferCharacter)){	/*If there is ever a non-whitespace non-number in the body of this P3 file, throw an error*/
@@ -279,9 +294,14 @@ int p6toP3(char *input, char *output, int numBytes, int width){
 	fprintf(outputPointer, "P3\n");	/*Put the 'magic numbers' into our newly created P3 file*/
 	fseek(inputPointer, 3, SEEK_SET);	/*Move the input file pointer past the input 'magic numbers', we don't need those*/
 	
+	while(isspace(fgetc(inputPointer))){}
+	fseek(inputPointer, -1, SEEK_CUR);
+	
 	while(whitespaceCount < 3){		/*Until the end of the header is reached, copy header info to the output file*/
 		bufferCharacter = fgetc(inputPointer);
 		if(isspace(bufferCharacter)){
+			while(isspace(fgetc(inputPointer))){}
+			fseek(inputPointer, -1, SEEK_CUR);
 			whitespaceCount++;
 		}
 		fprintf(outputPointer, "%c", bufferCharacter);
@@ -341,9 +361,14 @@ int p3toP6(char *input, char *output, int numBytes){
 	fprintf(outputPointer, "P6\n");	/*Put the 'magic numbers' into our newly created P6 file*/
 	fseek(inputPointer, 3, SEEK_SET);	/*Move the input file pointer past the input 'magic numbers', we don't need those*/
 	
+	while(isspace(fgetc(inputPointer))){}
+	fseek(inputPointer, -1, SEEK_CUR);
+	
 	while(whitespaceCount < 3){		/*Until the end of the header is reached, copy header info to the output file*/
 		bufferCharacter = fgetc(inputPointer);
 		if(isspace(bufferCharacter)){
+			while(isspace(fgetc(inputPointer))){}
+			fseek(inputPointer, -1, SEEK_CUR);
 			whitespaceCount++;
 		}
 		fprintf(outputPointer, "%c", bufferCharacter);
@@ -413,6 +438,8 @@ int p6toP6(char *input, char *output, int numBytes){
 	while(whitespaceCount < 4){		/*Until the end of the header is reached, copy header info to the output file*/
 		bufferCharacter = fgetc(inputPointer);
 		if(isspace(bufferCharacter)){
+			while(isspace(fgetc(inputPointer))){}
+			fseek(inputPointer, -1, SEEK_CUR);
 			whitespaceCount++;
 		}
 		fprintf(outputPointer, "%c", bufferCharacter);
