@@ -31,6 +31,10 @@ int main(int argc, char *argv[]){
 	
 	periodPointer = strtok(argv[2], delim);	/*Points to the input filename before the '.'*/
 	periodPointer = strtok(NULL, delim);	/*Points to the file extension of our input file*/
+	if(periodPointer == NULL){	/*If the input file is not .ppm, throw and error*/
+		fprintf(stderr, "\n\nError: Output file must be .ppm format\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
+		return 1;
+	}
 	if(strcmp(periodPointer, extension) != 0){	/*If the input file is not .ppm, throw and error*/
 		fprintf(stderr, "\n\nError: Input file must be .ppm format\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
 		return 1;
@@ -38,6 +42,10 @@ int main(int argc, char *argv[]){
 	
 	periodPointer = strtok(argv[3], delim);	/*Check to see if the output file has the extension 'ppm'*/
 	periodPointer = strtok(NULL, delim);
+	if(periodPointer == NULL){
+		fprintf(stderr, "\n\nError: Output file must be .ppm format\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
+		return 1;
+	}
 	if(strcmp(periodPointer, extension) != 0){
 		fprintf(stderr, "\n\nError: Output file must be .ppm format\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
 		return 1;
