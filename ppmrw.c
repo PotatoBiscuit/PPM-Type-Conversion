@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 
-char* removeComments(char* inputPointer);
+char* removeComments(char* input);
 
 int main(int argc, char *argv[]){
 	
@@ -228,8 +228,68 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	return 1;
 }
 
-char* removeComments(char* inputPointer){
-	return NULL;
+/*This function is not being used*/
+char* removeComments(char* input){	/*Attempted to create a function that removes comments, it did not work out*/
+	FILE *inputPointer = fopen(input, "rb");
+	FILE *tempInputPointer = fopen("tempInput.ppm", "wb");
+	char bufferCharacter;
+	char previousBuffer;
+	int whitespaceCount = 0;
+	int possibleComment = 0;
+	
+	while(whitespaceCount < 4){
+		bufferCharacter = fgetc(inputPointer);
+		if(bufferCharacter == -1){
+			fprintf(stderr, "Error: Input header formatted improperly");
+			return NULL;
+		}
+		if(isspace(bufferCharacter)){
+			if(bufferCharacter == '\n'){
+				possibleComment = 1;
+			}
+			while(1){
+				bufferCharacter = fgetc(inputPointer);
+				if(!isspace(bufferCharacter)){
+					break;
+				}
+				if(bufferCharacter == '\n'){
+					possibleComment = 1;
+					printf("\n%c\n", bufferCharacter);
+					previousBuffer = bufferCharacter;
+					continue;
+				}
+				possibleComment = 0;
+				printf("\n%c\n", bufferCharacter);
+				previousBuffer = bufferCharacter;
+			}
+			if(bufferCharacter == -1){
+				fprintf(stderr, "Error: Input header formatted improperly");
+				return NULL;
+			}
+			if(bufferCharacter == '#' && possibleComment == 1){
+					while((bufferCharacter = fgetc(inputPointer)) != '\n'){
+						if(bufferCharacter == -1){
+							fprintf(stderr, "Error: Input header formatted improperly");
+							return NULL;
+						}
+					}
+			}
+			
+			if(bufferCharacter == '#' && possibleComment == 0){
+				fprintf(stderr, "Error: Comments must always begin at the start of a newline");
+				return NULL;
+			}
+			
+			fseek(inputPointer, -1, SEEK_CUR);
+			whitespaceCount++;
+			fprintf(tempInputPointer, "\n");
+			continue;
+		}
+		fprintf(tempInputPointer, "%c", bufferCharacter);
+	}
+	fclose(inputPointer);
+	fclose(tempInputPointer);
+	return "tempInput.ppm";
 }
 
 int p3toP3(char *input, char *output, int numBytes, int width){
