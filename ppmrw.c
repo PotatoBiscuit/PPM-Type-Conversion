@@ -5,39 +5,36 @@
 
 int main(int argc, char *argv[]){
 	
-	FILE * testOpen;
-	char* periodPointer;
-	const char delim[2] = ".";
-	const char extension[4] = "ppm";
+	FILE * testOpen;	/*This pointer will test to see if the input file exists*/
+	char* periodPointer;	/*This pointer will help us split filenames by '.', so that was can see if they are ppm files*/
+	const char delim[2] = ".";	/*This will be our delimiter to split filenames with*/
+	const char extension[4] = "ppm";	/*This will be the desired file ending for our input and output file*/
 	
 	if (argc != 4){ /*If the user tries to put in too many/too little arguments, slap their wrist*/
 		fprintf(stderr, "\n\nError: Incorrect amount of arguments\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
 		return 1;
 	}
 	
-	if(sizeof(argv[1]) != 8){
-		fprintf(stderr, "\n\nError: Second argument must be a single digit number [3/6]\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
-		return 1;
-	}
-	if(!isdigit(*argv[1])){
+
+	if(!isdigit(*argv[1])){	/*If the first character of argument 2 is not a number, throw an error*/
 		fprintf(stderr, "\n\nError: Second argument must be a single digit number [3/6]\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
 		return 1;
 	}
 	
-	if((testOpen = fopen(argv[2], "rb")) == NULL){
+	if((testOpen = fopen(argv[2], "rb")) == NULL){	/*Try opening the input file to see if it exists, if it doesn't exist, throw error*/
 		fprintf(stderr, "\n\nError: Input file must exist\n\n");
 		return 1;
 	}
-	fclose(testOpen);
+	fclose(testOpen);	/*Close input file if it does exist*/
 	
-	periodPointer = strtok(argv[2], delim);
-	periodPointer = strtok(NULL, delim);
-	if(strcmp(periodPointer, extension) != 0){
+	periodPointer = strtok(argv[2], delim);	/*Points to the input filename before the '.'*/
+	periodPointer = strtok(NULL, delim);	/*Points to the file extension of our input file*/
+	if(strcmp(periodPointer, extension) != 0){	/*If the input file is not .ppm, throw and error*/
 		fprintf(stderr, "\n\nError: Input file must be .ppm format\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
 		return 1;
 	}
 	
-	periodPointer = strtok(argv[3], delim);
+	periodPointer = strtok(argv[3], delim);	/*Check to see if the output file has the extension 'ppm'*/
 	periodPointer = strtok(NULL, delim);
 	if(strcmp(periodPointer, extension) != 0){
 		fprintf(stderr, "\n\nError: Output file must be .ppm format\nRemember: ppmrw [3/6](Type of PPM file) input.ppm output.ppm\n\n");
@@ -46,13 +43,13 @@ int main(int argc, char *argv[]){
 	
 	if (*argv[1] == '3'){	/*If the user types a '3' in the command line, we must convert to P3 PPM format*/
 		printf("Converting to P3 format...\n\n");
-		if(ppmConversionHandler(argv[2], argv[3], 3))
+		if(ppmConversionHandler(strcat(argv[2], ".ppm"), strcat(argv[3], ".ppm"), 3))
 			return 1;
 		return 0;
 	}
 	if(*argv[1] == '6'){	/*If the user types a '6' in the command line, we must convert to P6 PPM format*/
 		printf("converting to P6 format...\n\n");
-		if(ppmConversionHandler(argv[2], argv[3], 6))
+		if(ppmConversionHandler(strcat(argv[2], ".ppm"), strcat(argv[3], ".ppm"), 6))
 			return 1;
 		return 0;
 	}
@@ -68,35 +65,36 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	int filePointerCounter = 0;		/*This will help us gather the height and width file info*/
 	int numDigitsWidth = 0;			/*This will be the digit count of the file Width field*/
 	int numDigitsHeight = 0;		/*This will be the digit count of the file Height field*/
-	int numDigitsAlpha = 0;
+	int numDigitsColor = 0;			/*This will be the digit count of the file Max Color field*/
 	char *widthPointer;				/*This will point to the Width string we pull from the file*/
 	char *heightPointer;			/*This will point to the Width string we pull from the file*/
-	char *alphaPointer;
+	char *colorPointer;				/*This will point to the Max Color string we pull from the file*/
 	int width;						/*This is the numeric Width value*/
 	int height;						/*This is the numeric Height value*/
 	char ppmType;					/*Type of PPM file that we need to convert*/
 	FILE *inputPointer = fopen(input, "rb");	/*Open the input file*/
 	
-	/*What?!*/
+
+	
 	if(fgetc(inputPointer) != 'P'){	/*Move file pointer one byte to the right, we want the number after the P*/
-		fprintf(stderr, "Error: Header is not in the correct format");
+		fprintf(stderr, "Error: Header is not in the correct format");	/*Throw error if the first input file character is not 'P'*/
 		return 1;
 	}
 	ppmType = fgetc(inputPointer);			/*Grab the format number of file, which should be 3 or 6*/
-	if(ppmType != '3' && ppmType != '6'){
+	if(ppmType != '3' && ppmType != '6'){	/*If the ppm format number is not 3 or 6, throw an error*/
 		fprintf(stderr, "Error: Sorry, but this software only converts P3 and P6 ppm files");
 		return 1;
 	}
 
-	if(!isspace(fgetc(inputPointer))){		/*Advance file pointer one byte*/
+	if(!isspace(fgetc(inputPointer))){		/*Advance file pointer one byte, if it isn't whitespace, throw an error*/
 		fprintf(stderr, "Error: Header is not in the correct format");
 		return 1;
 	}
 
 	
 	while(!isspace(fgetc(inputPointer))){	/*Iterate through the Width field*/
-		if(filePointerCounter >= 10){
-			fprintf(stderr, "Error: Width field is limited to 10 digits");
+		if(filePointerCounter >= 10){	/*If Width field is more than ten digits, or the end of the file is reached, throw an error*/
+			fprintf(stderr, "Error: Width field is limited to 10 digits, or Header info is incomplete");
 			return 1;
 		}
 		filePointerCounter++;
@@ -109,7 +107,7 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	fseek(inputPointer, -1 - filePointerCounter, SEEK_CUR);		/*Move pointer back to the start of the Width field*/
 	while(filePointerCounter){									/*Record each digit of the Width field*/
 		*widthPointer = fgetc(inputPointer);
-		if(!isdigit(*widthPointer)){
+		if(!isdigit(*widthPointer)){							/*If there is non-number in the Width field, throw an error*/
 			fprintf(stderr, "Error: Width field contains something other than a number");
 			return 1;
 		}
@@ -123,7 +121,7 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	
 	while(!isspace(fgetc(inputPointer))){						/*Do what we did for the Width field, for the Height field*/
 		if(filePointerCounter >= 10){
-			fprintf(stderr, "Error: Height field is limited to 10 digits");
+			fprintf(stderr, "Error: Height field is limited to 10 digits, or Header info is incomplete");
 			return 1;
 		}
 		filePointerCounter++;
@@ -146,31 +144,31 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	heightPointer -= numDigitsHeight;
 	
 	
-	fseek(inputPointer, 1, SEEK_CUR);
+	fseek(inputPointer, 1, SEEK_CUR);			/*We will also do the same for the Max Color field*/
 	while(!isspace(fgetc(inputPointer))){
-		if(filePointerCounter >= 3){
-			fprintf(stderr, "Error: Max alpha field is limited to 3 digits");
+		if(filePointerCounter >= 3){	/*Max color field can be no more than 3 digits*/
+			fprintf(stderr, "Error: Max color field is limited to 3 digits, or Header info is incomplete");
 			return 1;
 		}
 		filePointerCounter++;
 	}
-	alphaPointer = malloc(sizeof(char)*(filePointerCounter + 1));
-	numDigitsAlpha = filePointerCounter;
+	colorPointer = malloc(sizeof(char)*(filePointerCounter + 1));
+	numDigitsColor = filePointerCounter;
 	fseek(inputPointer, -1 - filePointerCounter, SEEK_CUR);
 	
 	while(filePointerCounter){
-		*alphaPointer = fgetc(inputPointer);
-		if(!isdigit(*alphaPointer)){
-			fprintf(stderr, "Error: Max alpha field contains something other than a number");
+		*colorPointer = fgetc(inputPointer);
+		if(!isdigit(*colorPointer)){
+			fprintf(stderr, "Error: Max color field contains something other than a number");
 			return 1;
 		}
 		filePointerCounter--;
-		alphaPointer++;
+		colorPointer++;
 	}
-	*alphaPointer = '\0';
-	alphaPointer -= numDigitsAlpha;
+	*colorPointer = '\0';
+	colorPointer -= numDigitsColor;
 
-	if(atoi(alphaPointer) != 255){
+	if(atoi(colorPointer) != 255){	/*If the Max Color field is not 255, the file is not in one byte format*/
 		fprintf(stderr, "Error: Files must be in one byte format");
 		return 1;
 	}
@@ -179,7 +177,7 @@ int ppmConversionHandler(char *input, char *output, int conversionType){	/*This 
 	fclose(inputPointer);			/*Close input file*/
 	width = atoi(widthPointer);
 	height = atoi(heightPointer);
-	numBytes = 3 * width * height;	/*Computer number of bytes in our image using our recorded Height and Width fields*/
+	numBytes = 3 * width * height;	/*Compute number of bytes in our image using our recorded Height and Width fields*/
 	free(widthPointer);
 	free(heightPointer);
 	
@@ -238,14 +236,26 @@ int p3toP3(char *input, char *output, int numBytes, int width){
 	whitespaceCount = 0;	/*Reset whitespace count, we will use it later*/
 	
 	/*Fancy arithmetic to calculate total whitespaces in the body of the input file*/
-	totalWhitespaces = 2*(numBytes/3) + (numBytes/width/3)*(width - 1)*2 + (numBytes/width/3);
+	totalWhitespaces = numBytes;
 	
-	while(whitespaceCount < totalWhitespaces){	/*Write the entire input file body to output, until all whitespace has been scanned*/
+	while(whitespaceCount < totalWhitespaces){	/*Write the entire input file body to output, until all whitespace have been scanned*/
 		bufferCharacter = fgetc(inputPointer);
-		if(isspace(bufferCharacter)){
-			whitespaceCount++;
+		if(bufferCharacter == -1){	/*If the end of the file is reached before the expected whitespaces are scanned, file is not large enough*/
+			fprintf(stderr, "Error: Input file is not as large as its width and height fields indicate");
+			return 1;
 		}
-		fprintf(outputPointer, "%c", bufferCharacter);
+		if(isspace(bufferCharacter)){	/*More than one whitespace may be back to back*/
+			whitespaceCount++;
+			while(isspace(fgetc(inputPointer))){}
+			fseek(inputPointer, -1, SEEK_CUR);
+			fprintf(outputPointer, "\n", bufferCharacter);	/*Write a single \n for every group of whitespace*/
+			continue;
+		}
+		if(!isdigit(bufferCharacter)){	/*If there is ever a non-whitespace non-number in the body of this P3 file, throw an error*/
+			fprintf(stderr, "Error: Input file information formatted improperly");
+			return 1;
+		}
+		fprintf(outputPointer, "%c", bufferCharacter);	/*Print characters to the output file*/
 	}
 	
 	fclose(inputPointer);	/*Close input file*/
@@ -261,11 +271,10 @@ int p6toP3(char *input, char *output, int numBytes, int width){
 	unsigned char *buffer = malloc(sizeof(char)*numBytes);	/*Create buffer for later reading and writing use*/
 	int sizeOfRead;		/*This will keep track of the total number of bytes read, in case something goes wrong*/
 	char bufferCharacter;	/*This is a single character buffer for reading and writing the header*/
-	long bufferNumber;	/*This will hold the color values to be inserted into the new P3 file*/
+	int bufferNumber;	/*This will hold the color values to be inserted into the new P3 file*/
 	int whitespaceCount = 0;	/*This will help us figure out when the header ends*/
 	int genericCounter = 0;		/*This is a generic counter that will help print our values correctly*/
 	int genericCounter1 = 0;	/*Same here*/
-	int bufferCounter = 0;
 	
 	fprintf(outputPointer, "P3\n");	/*Put the 'magic numbers' into our newly created P3 file*/
 	fseek(inputPointer, 3, SEEK_SET);	/*Move the input file pointer past the input 'magic numbers', we don't need those*/
@@ -279,6 +288,9 @@ int p6toP3(char *input, char *output, int numBytes, int width){
 	}
 	
 	sizeOfRead = fread(buffer, 1, numBytes, inputPointer);	/*Read non-header info from the input file into our buffer*/
+	if(sizeOfRead < numBytes){	/*If the read function did not get enough bytes of info, warn the user*/
+		fprintf(stderr, "Warning: Input file is not as large as its width and height fields indicate\n\n");
+	}
 	
 	while(sizeOfRead){	/*While there are still bytes in the buffer to write, continue*/
 		if(genericCounter == 2 && genericCounter1 == width - 1){	/*If final column of picture is reached, write color value, then new-line*/
@@ -318,11 +330,13 @@ int p3toP6(char *input, char *output, int numBytes){
 	
 	char *buffer = malloc(sizeof(char)*numBytes);	/*Create buffer for later reading and writing use*/
 	char bufferCharacter;	/*This is a single character buffer for reading and writing the header*/
-	char *valuePointer;
-	int filePointerCounter = 0;
-	int numDigitsValue = 0;
-	int whitespaceCount = 0;
-	int numBytes1 = numBytes;
+	char *valuePointer;		/*This will hold the string that contains individual color values for each pixel*/
+	int filePointerCounter = 0;	/*Counter that will help us count digit length of each color value*/
+	int numDigitsValue = 0;		/*Will hold the digit length of each color value*/
+	int whitespaceCount = 0;	/*Counts total whitespaces for header info*/
+	int sizeChecker = 0;		/*Makes sure each color values is at most 3 digits*/
+	int valueChecker = 0;		/*Checks the amount of each color value, to ensure that it is in 1 byte format*/
+	int numBytes1 = numBytes;	/*Seperate variable to record numBytes, so that the original can be used as a counter*/
 	
 	fprintf(outputPointer, "P6\n");	/*Put the 'magic numbers' into our newly created P6 file*/
 	fseek(inputPointer, 3, SEEK_SET);	/*Move the input file pointer past the input 'magic numbers', we don't need those*/
@@ -335,9 +349,23 @@ int p3toP6(char *input, char *output, int numBytes){
 		fprintf(outputPointer, "%c", bufferCharacter);
 	}
 	
-	while(numBytes){
-		while(!isspace(fgetc(inputPointer))){	/*Iterate through the color value*/
+	while(numBytes){	/*Convert the three digit numbers in the input file to a char, then store in a buffer*/
+		while(!isspace(bufferCharacter = fgetc(inputPointer))){	/*Iterate through the color value*/
 			filePointerCounter++;
+			sizeChecker++;
+			if(bufferCharacter == -1){	/*If end of file is reached, the file is too small, throw an error*/
+				fprintf(stderr, "Error: Input file is not as large as its width and height fields indicate");
+				return 1;
+			}
+			if(sizeChecker >= 4){	/*If an color value has more than three digits, throw an error*/
+				fprintf(stderr, "Error: Input File has improperly formatted data");
+				return 1;
+			}
+		}
+		sizeChecker = 0;
+		if(filePointerCounter == 0){	/*If an color value was not found, end of file has been reached, throw an error*/
+			fprintf(stderr, "Error: Input file is not as large as its width and height fields indicate");
+			return 1;
 		}
 
 		valuePointer = malloc(sizeof(char)*(filePointerCounter + 1));		/*Create space for the color value on this computer*/
@@ -353,21 +381,25 @@ int p3toP6(char *input, char *output, int numBytes){
 		*valuePointer = '\0';
 		
 		valuePointer -= numDigitsValue;
-		bufferCharacter = atoi(valuePointer);
-		*buffer = bufferCharacter;
+		valueChecker = atoi(valuePointer);
+		if(valueChecker > 255 || valueChecker < 0){				/*Ensure that the color value is between 0-255*/
+			fprintf(stderr, "Error: Input File has improperly formatted data");
+			return 1;
+		}
+		*buffer = valueChecker;	/*Store color value in buffer*/
 		buffer++;
-		while(isspace(fgetc(inputPointer))){}
+		while(isspace(fgetc(inputPointer))){}	/*Iterate through all concurrent whitespace*/
 		fseek(inputPointer, -1, SEEK_CUR);
-		free(valuePointer);
+		free(valuePointer);		/*Free previously used memory*/
 		numBytes--;
 	}
-	buffer -= (numBytes1);
-	fwrite(buffer, sizeof(char), numBytes1, outputPointer);
+	buffer -= (numBytes1);	/*Reset buffer pointer*/
+	fwrite(buffer, sizeof(char), numBytes1, outputPointer);	/*Write buffer info into output file*/
 	
 	
 	
-	printf("P3 to P6 Conversion Complete!\n\n");
-	return 0;
+	printf("P3 to P6 Conversion Complete!\n\n");	/*Notify user of success*/
+	return 0;	/*Return a successful number*/
 }
 
 int p6toP6(char *input, char *output, int numBytes){
@@ -387,6 +419,9 @@ int p6toP6(char *input, char *output, int numBytes){
 	}
 	
 	sizeOfRead = fread(buffer, 1, numBytes, inputPointer);	/*Read non-header info from the input file into our buffer*/
+	if(sizeOfRead < numBytes){
+		fprintf(stderr, "Warning: Input file is not as large as its width and height fields indicate\n\n");
+	}
 	fwrite(buffer, sizeof(char), sizeOfRead, outputPointer);	/*Write the data from our buffer into the output file*/
 	
 	free(buffer);
