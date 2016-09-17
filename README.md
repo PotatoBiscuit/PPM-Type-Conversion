@@ -12,6 +12,7 @@ Conversions go as follows:
 4. P6 to P6
 
 To use this program, type this into your terminal (after running the makefile):
+
 ppmrw (3/6)(Convert to P3 or P6) input.ppm output.ppm
 
 Notes:
