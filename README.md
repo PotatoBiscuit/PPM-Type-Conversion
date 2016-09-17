@@ -11,5 +11,9 @@ Conversions go as follows:
 
 4. P6 to P6
 
-To use this program, type this into your terminal:
-ppmrw [3/6](Convert to P3 or P6) input.ppm output.ppm
+To use this program, type this into your terminal (after running the makefile):
+ppmrw (3/6)(Convert to P3 or P6) input.ppm output.ppm
+
+Notes:
+
+-This software does not support comments. It will usually produce an error message. However, apart from comments, it is quite robust. Good luck breaking it!
